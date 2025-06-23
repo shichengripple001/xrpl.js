@@ -65,14 +65,14 @@ jobs:
     - name: Generate SBOM (CycloneDX)
       uses: CycloneDX/gh-node-module-generatebom@v1
       with:
-        output: 'bom.xml'
-        format: 'xml'
+        output: 'bom.json'
+        format: 'json'
 
     - name: Scan SBOM for vulnerabilities using Trivy
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: sbom
-        scan-ref: bom.xml
+        scan-ref: bom.json
         format: table
         exit-code: 0
         output: vuln-report.txt
