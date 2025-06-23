@@ -1,0 +1,120 @@
+name: Release & Security Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: 'Version to release (e.g., 2.12.1)'
+        required: true
+      git_ref:
+        description: 'Git ref to checkout (branch, tag, or commit SHA)'
+        required: true
+
+jobs:
+  run_test:
+    name: Run test Pipeline for ${{ github.event.inputs.package_version }}
+    uses: ./.github/workflows/nodejs.yml
+    with:
+      git_ref: ${{ github.event.inputs.git_ref }}
+    secrets: inherit
+
+  pre_release:
+    runs-on: ubuntu-latest
+    name: Release Pipeline for ${{ github.event.inputs.package_version }}
+    environment: manual-approval
+
+    steps:
+    - name: Validate package input format (name@version)
+      run: |
+        echo "Validating input: ${{ github.event.inputs.package_version }}"
+        if [[ ! "${{ github.event.inputs.package_version }}" =~ ^.+@[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Invalid format. Expected format: package@1.2.3 (e.g., ripple-binary-codec@2.4.1)"
+          exit 1
+        fi
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.git_ref }}
+        fetch-depth: 0
+
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build package
+      run: npm run build
+
+    - name: Notify Slack if tests fail
+      if: failure()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TITLE: "❌ Tests failed for xrpl.js ${{ github.event.inputs.package_version }}"
+        SLACK_MESSAGE: "Tests failed. Please check the logs in the GitHub Action run."
+
+    - name: Generate SBOM (CycloneDX)
+      uses: CycloneDX/gh-node-module-generatebom@v1
+      with:
+        output: 'bom.xml'
+        format: 'xml'
+
+    - name: Scan SBOM for vulnerabilities using Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: sbom
+        scan-ref: bom.xml
+        format: table
+        exit-code: 0
+        output: vuln-report.txt
+        severity: CRITICAL,HIGH
+
+
+    - name: Upload vulnerability report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vulnerability-report
+        path: vuln-report.txt
+
+  release:
+    runs-on: ubuntu-latest
+    name: Release Pipeline for ${{ github.event.inputs.package_version }}
+    environment:
+      name: manual-approval
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.event.inputs.package_version }}
+        name: Release v${{ github.event.inputs.package_version }}
+        draft: false
+        prerelease: false
+
+    - name: Publish to npm
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Notify Slack success
+      if: success()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TITLE: "✅ Released xrpl.js v${{ github.event.inputs.package_version }}"
+        SLACK_MESSAGE: "Published to npm and GitHub successfully."
+
+    - name: Notify Slack failure
+      if: failure()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TITLE: "❌ Release failed for xrpl.js v${{ github.event.inputs.package_version }}"
+        SLACK_MESSAGE: "An error occurred. Check the workflow logs."
