@@ -22,7 +22,6 @@ jobs:
   pre_release:
     runs-on: ubuntu-latest
     name: Release Pipeline for ${{ github.event.inputs.package_version }}
-    environment: manual-approval
 
     steps:
     - name: Validate package input format (name@version)
