@@ -1,5 +1,5 @@
 {
-  "name": "xrpl.js",
+  "name": "test-publish.js",
   "private": true,
   "scripts": {
     "analyze": "lerna run analyze --stream",
