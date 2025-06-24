@@ -30,7 +30,7 @@ jobs:
     - name: Validate package input format (name@version)
       run: |
         echo "Validating input: ${{ github.event.inputs.package_version }}"
-        if [[ ! "${{ github.event.inputs.package_version }}" =~ ^v?\d+\.\d+\.\d+$ ]]; then
+        if [[ ! "${{ github.event.inputs.package_version }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           echo "❌ Invalid format. Expected format: 1.2.3 or v1.2.3 "
           exit 1
         fi
