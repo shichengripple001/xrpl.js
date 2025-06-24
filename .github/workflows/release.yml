@@ -91,6 +91,7 @@ jobs:
     - name: Pack tarball
       run: |
         mkdir dist
+        npm version ${{ github.event.inputs.package_version }}
         npm pack --pack-destination dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
 
