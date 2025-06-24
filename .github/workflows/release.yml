@@ -114,7 +114,7 @@ jobs:
         fi
 
         echo "✅ Artifact ID: $ARTIFACT_ID"
-        echo "🔗 Review URL: https://github.com/$REPO/suites/${{ github.run_id }}/artifacts/$ARTIFACT_ID"
+        echo "🔗 Review URL: https://github.com/$REPO/actions/runs/${{ github.run_id }}/artifacts/$ARTIFACT_ID"
 
   release:
     runs-on: ubuntu-latest
