@@ -90,6 +90,7 @@ jobs:
 
     - name: Pack tarball
       run: |
+        mkdir dist
         npm pack --pack-destination dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
 
