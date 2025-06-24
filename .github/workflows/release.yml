@@ -90,10 +90,15 @@ jobs:
 
     - name: Pack tarball
       run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         mkdir dist
         npm version ${{ github.event.inputs.package_version }}
         npm pack --pack-destination dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
+      env:
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Upload tarball as artifact
       uses: actions/upload-artifact@v4
