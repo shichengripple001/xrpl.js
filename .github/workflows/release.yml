@@ -72,7 +72,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: sbom
-        scan-ref: bom.json
+        scan-ref: sbom.json
         format: table
         exit-code: 0
         output: vuln-report.txt
