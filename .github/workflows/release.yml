@@ -164,8 +164,12 @@ jobs:
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Publish to npm
-      run: npm publish dist/*.tgz
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        npm publish dist/*.tgz
       env:
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Notify Slack success
