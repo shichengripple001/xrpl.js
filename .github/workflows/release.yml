@@ -14,12 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # run_test:
-  #   name: Run test Pipeline for ${{ github.event.inputs.package_version }}
-  #   uses: ./.github/workflows/nodejs.yml
-  #   with:
-  #     git_ref: ${{ github.event.inputs.git_ref }}
-  #   secrets: inherit
+  run_test:
+    runs-on: ubuntu-latest
+    name: Pre Release Pipeline for ${{ github.event.inputs.package_version }}
+
+    steps:
+    - name: Validate package input format (name@version)
+      run: |
+        echo "test"
+
 
   pre_release:
     runs-on: ubuntu-latest
