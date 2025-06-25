@@ -169,7 +169,10 @@ jobs:
 
     - name: Publish to npm
       run: |
-        npm publish dist/*.tgz --registry=https://registry.npmjs.org/
+        cd
+        PKG=$(ls *.tgz)
+        echo $PKG
+        npm publish "$PKG" --registry=https://registry.npmjs.org/
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
