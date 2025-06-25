@@ -81,6 +81,14 @@ jobs:
         output: vuln-report.txt
         severity: CRITICAL,HIGH
 
+    - name: Upload sbom to OWASP
+      run: |
+        curl -X POST \
+          -H "X-Api-Key: ${{ secrets.OWASP_TOKEN }}" \
+          -F "project=1e1ec1b1-c544-43fa-89b0-6d6f97fbf01a" \
+          -F "bom=@sbom.json" \
+          http://owasp-dt-api.stg.ripplex.io/api/v1/bom
+
     - name: Print scan report
       run: cat vuln-report.txt
 
