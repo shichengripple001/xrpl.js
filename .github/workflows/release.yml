@@ -172,7 +172,7 @@ jobs:
 
     - name: Publish to npm
       run: |
-        cd
+        cd dist
         PKG=$(ls *.tgz)
         echo $PKG
         npm publish "$PKG" --registry=https://registry.npmjs.org/
