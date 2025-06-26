@@ -3,6 +3,9 @@ name: Release Pipeline
 on:
   workflow_dispatch:
     inputs:
+      package_name:
+        description: 'The package name to release (e.g., xrpl, ripple-address-codec)'
+        required: true
       package_version:
         description: 'Version to release (e.g., 2.12.1)'
         required: true
@@ -35,7 +38,43 @@ jobs:
           echo "❌ Invalid format. Expected format: 1.2.3 or v1.2.3 "
           exit 1
         fi
+    - name: Make sure package version is greater than github release version and npmjs version
+      env:
+        PACKAGE_NAME: ${{ github.event.inputs.package_name }}
+        REQUESTED_VERSION: ${{ github.event.inputs.package_version }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        npm install semver
 
+        CLEAN_VERSION="${REQUESTED_VERSION#v}"  # strip leading 'v'
+
+        echo "🔎 Checking $PACKAGE_NAME..."
+        echo "📦 Requested version: $CLEAN_VERSION"
+
+        # Get current package version from local source
+        CURRENT_LOCAL_VERSION=$(node -p "require('./packages/${PACKAGE_NAME}/package.json').version")
+        echo "📄 Local package.json version: $CURRENT_LOCAL_VERSION"
+
+        # Fetch latest GitHub release tag
+        GITHUB_LATEST=$(curl -s -H "Authorization: token $GH_TOKEN" \
+          https://api.github.com/repos/${{ github.repository }}/releases/latest | \
+          jq -r .tag_name | sed 's/^v//')
+
+        echo "🔖 Latest GitHub release tag: $GITHUB_LATEST"
+
+        # Fetch latest published version from npm
+        NPM_LATEST=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
+        echo "📦 Latest npm version: $NPM_LATEST"
+
+        # Check if requested version is less than or equal to any of them
+        for COMPARE_VERSION in "$GITHUB_LATEST" "$NPM_LATEST"; do
+          if npx semver "$CLEAN_VERSION" -le "$COMPARE_VERSION"; then
+            echo "❌ Requested version ($CLEAN_VERSION) is <= published version ($COMPARE_VERSION)"
+            exit 1
+          fi
+        done
+
+        echo "✅ Version is valid: greater than both GitHub and npm versions."
     - name: Checkout code
       uses: actions/checkout@v4
       with:
@@ -96,18 +135,26 @@ jobs:
       with:
         name: vulnerability-report
         path: vuln-report.txt
+    - name: Generate lerna.json for choosen the package
+      run: |
+        PACKAGE_NAME="${{ github.event.inputs.package_name }}"
+
+        echo "🔧 Updating lerna.json to include only packages/${PACKAGE_NAME}"
+
+        # Use jq to update the packages field safely
+        jq --arg pkg "packages/$PACKAGE_NAME" '.packages = [$pkg]' lerna.json > lerna.tmp.json && mv lerna.tmp.json lerna.json
+
+        echo "✅ lerna.json updated:"
+        cat lerna.json
 
     - name: Pack tarball
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        mkdir dist
-        npm version ${{ github.event.inputs.package_version }}
-        npm pack --pack-destination dist
+        npx lerna exec --scope xrpl -- npm pack --pack-destination ../../dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
       env:
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 
     - name: Upload tarball as artifact
       uses: actions/upload-artifact@v4

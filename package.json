@@ -1,5 +1,6 @@
 {
   "name": "test-publish.js",
+  "private": true,
   "scripts": {
     "analyze": "lerna run analyze --stream",
     "test": "lerna run test --stream",
