@@ -57,16 +57,12 @@ jobs:
         REQUESTED_VERSION: ${{ github.event.inputs.package_version }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        npm install semver
-
         CLEAN_VERSION="${REQUESTED_VERSION#v}"  # strip leading 'v'
-
         echo "🔎 Checking $PACKAGE_NAME..."
         echo "📦 Requested version: $CLEAN_VERSION"
-
         # Get current package version from local source
         CURRENT_LOCAL_VERSION=$(node -p "require('./packages/${PACKAGE_NAME}/package.json').version")
-        echo "Local package.json version: $CURRENT_LOCAL_VERSION"
+        echo "📘 Local package.json version: $CURRENT_LOCAL_VERSION"
 
         # Fetch latest GitHub release tag
         GITHUB_LATEST=$(curl -s -H "Authorization: token $GH_TOKEN" \
@@ -79,15 +75,29 @@ jobs:
         NPM_LATEST=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
         echo "📦 Latest npm version: $NPM_LATEST"
 
-        # Check if requested version is less than or equal to any of them
+        # Function to compare semantic versions
+        is_version_less_equal() {
+          IFS='.' read -r -a a <<< "$1"
+          IFS='.' read -r -a b <<< "$2"
+          for i in 0 1 2; do
+            local ai="${a[i]:-0}"
+            local bi="${b[i]:-0}"
+            if (( ai < bi )); then return 0; fi
+            if (( ai > bi )); then return 1; fi
+          done
+          return 0  # equal
+        }
+
+        # Check against GitHub and npm versions
         for COMPARE_VERSION in "$GITHUB_LATEST" "$NPM_LATEST"; do
-          if npx semver "$CLEAN_VERSION" -le "$COMPARE_VERSION"; then
+          if is_version_less_equal "$CLEAN_VERSION" "$COMPARE_VERSION"; then
             echo "❌ Requested version ($CLEAN_VERSION) is <= published version ($COMPARE_VERSION)"
             exit 1
           fi
         done
 
         echo "✅ Version is valid: greater than both GitHub and npm versions."
+
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
