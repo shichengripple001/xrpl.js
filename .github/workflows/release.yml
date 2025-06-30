@@ -107,6 +107,10 @@ jobs:
 
     - name: Build package
       run: |
+        npm --version
+        node --version
+        ls -l
+        pwd
         npm ci
         npm run build
 
