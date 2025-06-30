@@ -170,7 +170,7 @@ jobs:
 
     - name: Pack tarball
       run: |
-        npx lerna exec --scope @shichengsg001/xrpl -- npm pack --pack-destination ../../dist
+        npx lerna exec --scope @shichengsh001/xrpl -- npm pack --pack-destination ../../dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
       env:
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
