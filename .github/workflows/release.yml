@@ -109,7 +109,6 @@ jobs:
       run: |
         npm --version
         node --version
-        npx tsc --version
         ls -l
         pwd
         npm ci
