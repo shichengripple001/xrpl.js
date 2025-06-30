@@ -47,7 +47,7 @@ const secp256k1: SigningScheme = {
         // Would fail tests if signatures aren't deterministic
         extraEntropy: undefined,
       })
-      .toDERHex(true)
+      .toDERHex()
       .toUpperCase()
   },
 
