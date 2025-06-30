@@ -13,7 +13,7 @@ class quality {
    * @returns Serialized quality
    */
   static encode(quality: string): Uint8Array {
-    const decimal = BigNumber(quality)
+    const decimal = new BigNumber(quality)
     const exponent = (decimal?.e || 0) - 15
     const qualityString = decimal.times(`1e${-exponent}`).abs().toString()
     const bytes = coreTypes.UInt64.from(BigInt(qualityString)).toBytes()
