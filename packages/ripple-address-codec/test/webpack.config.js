@@ -1,5 +1,5 @@
 'use strict'
-const { merge } = require('webpack-merge')
+const merge = require('webpack-merge')
 const { webpackForTest } = require('../../../weback.test.config')
 const { getDefaultConfiguration } = require('../../../webpack.config')
 
