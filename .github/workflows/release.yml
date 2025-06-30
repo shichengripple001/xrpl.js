@@ -112,7 +112,7 @@ jobs:
         ls -l
         pwd
         npm ci
-        npm ls @noble/curves
+        npm ls bignumber.js
         npm run build
 
     - name: Notify Slack if tests fail
