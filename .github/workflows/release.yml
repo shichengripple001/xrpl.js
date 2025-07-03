@@ -256,16 +256,28 @@ jobs:
 
     - name: Notify Slack success
       if: success()
-      uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_TITLE: "✅ Released xrpl.js v${{ github.event.inputs.package_version }}"
-        SLACK_MESSAGE: "Published to npm and GitHub successfully."
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      run: |
+        MESSAGE="✅ Released xrpl.js v${{ github.event.inputs.package_version }}. Published to npm and GitHub successfully."
+        curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+                --arg channel "#your-channel" \
+                --arg text "$MESSAGE" \
+                '{channel: $channel, text: $text}')"
 
-    - name: Notify Slack failure
+    - name: Notify Slack if tests fail
       if: failure()
-      uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_TITLE: "❌ Release failed for xrpl.js v${{ github.event.inputs.package_version }}"
-        SLACK_MESSAGE: "An error occurred. Check the workflow logs."
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      run: |
+        MESSAGE="❌ Tests failed for xrpl.js ${{ github.event.inputs.package_version }}. Check the logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+                --arg channel "#your-channel" \
+                --arg text "$MESSAGE" \
+                '{channel: $channel, text: $text}')"
