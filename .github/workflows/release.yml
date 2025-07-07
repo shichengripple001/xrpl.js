@@ -171,7 +171,7 @@ jobs:
     - name: Pack tarball
       run: |
         mkdir dist
-        npx lerna exec --scope @shichengsh001/xrpl -- npm pack --pack-destination ../../dist
+        npx lerna exec --scope $PACKAGE_NAME -- npm pack --pack-destination ../../dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
       env:
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
@@ -250,7 +250,7 @@ jobs:
         cd dist
         PKG=$(ls *.tgz)
         echo $PKG
-        npm publish "$PKG" --access public --registry=https://registry.npmjs.org/
+        npm publish "$PKG" --access public --registry=https://registry.npmjs.org/ --dry-run
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -264,7 +264,7 @@ jobs:
           -H "Authorization: Bearer $SLACK_TOKEN" \
           -H "Content-Type: application/json" \
           -d "$(jq -n \
-                --arg channel "#your-channel" \
+                --arg channel "#ripplex-test-notifications-non-prod" \
                 --arg text "$MESSAGE" \
                 '{channel: $channel, text: $text}')"
 
@@ -278,6 +278,6 @@ jobs:
           -H "Authorization: Bearer $SLACK_TOKEN" \
           -H "Content-Type: application/json" \
           -d "$(jq -n \
-                --arg channel "#your-channel" \
+                --arg channel "#ripplex-test-notifications-non-prod" \
                 --arg text "$MESSAGE" \
                 '{channel: $channel, text: $text}')"
