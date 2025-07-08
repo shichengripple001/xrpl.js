@@ -56,6 +56,7 @@ jobs:
         # dubugging info
         npm --version
         node --version
+        npm ls webpack-merge
         ls -l
         pwd
 
