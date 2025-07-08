@@ -65,11 +65,17 @@ jobs:
 
     - name: Notify Slack if tests fail
       if: failure()
-      uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_TITLE: "❌ Tests failed for xrpl.js ${{ github.event.inputs.package_version }}"
-        SLACK_MESSAGE: "Tests failed. Please check the logs in the GitHub Action run."
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      run: |
+        MESSAGE="❌ Tests failed for xrpl.js ${{ github.event.inputs.package_version }}. Check the logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+                --arg channel "#ripplex-test-notifications-non-prod" \
+                --arg text "$MESSAGE" \
+                '{channel: $channel, text: $text}')"
 
     - name: Install cyclonedx-npm
       run: npm install -g @cyclonedx/cyclonedx-npm
@@ -119,7 +125,7 @@ jobs:
     - name: Pack tarball
       run: |
         mkdir dist
-        npx lerna exec --scope @shichengsh001/xrpl -- npm pack --pack-destination ../../dist
+        npx lerna exec --scope xrpl -- npm pack --pack-destination ../../dist
         echo "TARBALL=$(ls dist/*.tgz)" >> $GITHUB_ENV
       env:
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
@@ -204,16 +210,28 @@ jobs:
 
     - name: Notify Slack success
       if: success()
-      uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_TITLE: "✅ Released xrpl.js v${{ github.event.inputs.package_version }}"
-        SLACK_MESSAGE: "Published to npm and GitHub successfully."
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      run: |
+        MESSAGE="✅ Released xrpl.js v${{ github.event.inputs.package_version }}. Published to npm and GitHub successfully."
+        curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+                --arg channel "#ripplex-test-notifications-non-prod" \
+                --arg text "$MESSAGE" \
+                '{channel: $channel, text: $text}')"
 
-    - name: Notify Slack failure
+    - name: Notify Slack if tests fail
       if: failure()
-      uses: rtCamp/action-slack-notify@v2
       env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_TITLE: "❌ Release failed for xrpl.js v${{ github.event.inputs.package_version }}"
-        SLACK_MESSAGE: "An error occurred. Check the workflow logs."
+        SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      run: |
+        MESSAGE="❌ Tests failed for xrpl.js ${{ github.event.inputs.package_version }}. Check the logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        curl -X POST https://slack.com/api/chat.postMessage \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+                --arg channel "#ripplex-test-notifications-non-prod" \
+                --arg text "$MESSAGE" \
+                '{channel: $channel, text: $text}')"
