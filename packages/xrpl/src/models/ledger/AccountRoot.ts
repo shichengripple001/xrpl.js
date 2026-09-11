@@ -22,6 +22,21 @@ export default interface AccountRoot extends BaseLedgerEntry, HasPreviousTxnID {
   /** The sequence number of the next valid transaction for this account. */
   Sequence: number
   /**
+   * (Optional) The number of ledger objects owned by this account that are
+   * sponsored by other accounts. Used in reserve calculations for XLS-68.
+   */
+  SponsoredOwnerCount?: number
+  /**
+   * (Optional) The number of ledger objects this account is sponsoring for
+   * other accounts. Used in reserve calculations for XLS-68.
+   */
+  SponsoringOwnerCount?: number
+  /**
+   * (Optional) The number of accounts for which this account is providing
+   * account-level sponsorship. Used in reserve calculations for XLS-68.
+   */
+  SponsoringAccountCount?: number
+  /**
    * The identifying hash of the transaction most recently sent by this
    * account. This field must be enabled to use the AccountTxnID transaction
    * field. To enable it, send an AccountSet transaction with the.
@@ -34,6 +49,18 @@ export default interface AccountRoot extends BaseLedgerEntry, HasPreviousTxnID {
    * If present, indicates that this is a special AMM AccountRoot; always omitted on non-AMM accounts.
    */
   AMMID?: string
+  /**
+   * The ledger entry ID of the corresponding Vault ledger entry.
+   * Present only on a vault's pseudo-account AccountRoot; always omitted on
+   * non-vault accounts.
+   */
+  VaultID?: string
+  /**
+   * The ledger entry ID of the corresponding LoanBroker ledger entry.
+   * Present only on a loan broker's pseudo-account AccountRoot; always omitted
+   * on non-loan-broker accounts.
+   */
+  LoanBrokerID?: string
   /**
    * A domain associated with this account. In JSON, this is the hexadecimal
    * for the ASCII representation of the domain.
@@ -78,6 +105,12 @@ export default interface AccountRoot extends BaseLedgerEntry, HasPreviousTxnID {
   MintedNFTokens?: number
   /** Another account that can mint NFTokens on behalf of this account. */
   NFTokenMinter?: string
+  /**
+   * The account that is sponsoring the reserves for this account.
+   * If present, indicates that another account is paying the base reserve
+   * for this account's existence in the ledger.
+   */
+  Sponsor?: string
 }
 
 /**
@@ -146,6 +179,11 @@ export interface AccountRootFlagsInterface {
    * This address can claw back issued IOUs. Once enabled, cannot be disabled.
    */
   lsfAllowTrustLineClawback?: boolean
+
+  /**
+   * Allow IOUs to be used as escrow amounts for an issuer
+   */
+  lsfAllowTrustLineLocking?: boolean
 }
 
 export enum AccountRootFlags {
@@ -210,4 +248,9 @@ export enum AccountRootFlags {
    * This address can claw back issued IOUs. Once enabled, cannot be disabled.
    */
   lsfAllowTrustLineClawback = 0x80000000,
+  /**
+   * If the issuer's account does not have the lsfAllowTrustLineLocking flag set,
+   * then Escrow ledger-objects cannot be created with such IOUs.
+   */
+  lsfAllowTrustLineLocking = 0x40000000,
 }

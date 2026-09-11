@@ -3,6 +3,11 @@ import { assert } from 'chai'
 import { ValidationError } from '../../src'
 import { validateBaseTransaction } from '../../src/models/transactions/common'
 
+const assertValid = (tx: any): void =>
+  assert.doesNotThrow(() => validateBaseTransaction(tx))
+const assertInvalid = (tx: any, message: string): void =>
+  assert.throws(() => validateBaseTransaction(tx), ValidationError, message)
+
 /**
  * Transaction Verification Testing.
  *
@@ -10,7 +15,7 @@ import { validateBaseTransaction } from '../../src/models/transactions/common'
  */
 describe('BaseTransaction', function () {
   it(`Verifies all optional BaseTransaction`, function () {
-    const txJson = {
+    const txJson: any = {
       Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
       TransactionType: 'Payment',
       Fee: '12',
@@ -56,7 +61,7 @@ describe('BaseTransaction', function () {
         '3045022100C6708538AE5A697895937C758E99A595B57A16393F370F11B8D4C032E80B532002207776A8E85BB9FAF460A92113B9C60F170CD964196B1F084E0DAB65BAEC368B66',
     }
 
-    assert.doesNotThrow(() => validateBaseTransaction(txJson))
+    assertValid(txJson)
   })
 
   it(`Verifies only required BaseTransaction`, function () {
@@ -65,7 +70,7 @@ describe('BaseTransaction', function () {
       TransactionType: 'Payment',
     }
 
-    assert.doesNotThrow(() => validateBaseTransaction(txJson))
+    assertValid(txJson)
   })
 
   it(`Handles invalid Fee`, function () {
@@ -75,11 +80,7 @@ describe('BaseTransaction', function () {
       Fee: 1000,
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidFee),
-      ValidationError,
-      'Payment: invalid field Fee',
-    )
+    assertInvalid(invalidFee, 'Payment: invalid field Fee')
   })
 
   it(`Handles invalid Sequence`, function () {
@@ -89,11 +90,7 @@ describe('BaseTransaction', function () {
       Sequence: '145',
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidSeq),
-      ValidationError,
-      'Payment: invalid field Sequence',
-    )
+    assertInvalid(invalidSeq, 'Payment: invalid field Sequence')
   })
 
   it(`Handles invalid AccountTxnID`, function () {
@@ -103,11 +100,7 @@ describe('BaseTransaction', function () {
       AccountTxnID: ['WRONG'],
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidID),
-      ValidationError,
-      'Payment: invalid field AccountTxnID',
-    )
+    assertInvalid(invalidID, 'Payment: invalid field AccountTxnID')
   })
 
   it(`Handles invalid LastLedgerSequence`, function () {
@@ -117,9 +110,8 @@ describe('BaseTransaction', function () {
       LastLedgerSequence: '1000',
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidLastLedgerSequence),
-      ValidationError,
+    assertInvalid(
+      invalidLastLedgerSequence,
       'Payment: invalid field LastLedgerSequence',
     )
   })
@@ -131,11 +123,7 @@ describe('BaseTransaction', function () {
       SourceTag: ['ARRAY'],
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidSourceTag),
-      ValidationError,
-      'Payment: invalid field SourceTag',
-    )
+    assertInvalid(invalidSourceTag, 'Payment: invalid field SourceTag')
   })
 
   it(`Handles invalid SigningPubKey`, function () {
@@ -145,11 +133,7 @@ describe('BaseTransaction', function () {
       SigningPubKey: 1000,
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidSigningPubKey),
-      ValidationError,
-      'Payment: invalid field SigningPubKey',
-    )
+    assertInvalid(invalidSigningPubKey, 'Payment: invalid field SigningPubKey')
   })
 
   it(`Handles invalid TicketSequence`, function () {
@@ -159,9 +143,8 @@ describe('BaseTransaction', function () {
       TicketSequence: '1000',
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidTicketSequence),
-      ValidationError,
+    assertInvalid(
+      invalidTicketSequence,
       'Payment: invalid field TicketSequence',
     )
   })
@@ -173,11 +156,7 @@ describe('BaseTransaction', function () {
       TxnSignature: 1000,
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidTxnSignature),
-      ValidationError,
-      'Payment: invalid field TxnSignature',
-    )
+    assertInvalid(invalidTxnSignature, 'Payment: invalid field TxnSignature')
   })
 
   it(`Handles invalid Signers`, function () {
@@ -187,11 +166,7 @@ describe('BaseTransaction', function () {
       Signers: [],
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidSigners),
-      ValidationError,
-      'BaseTransaction: invalid Signers',
-    )
+    assertInvalid(invalidSigners, 'BaseTransaction: invalid Signers')
 
     const invalidSigners2 = {
       Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
@@ -205,11 +180,7 @@ describe('BaseTransaction', function () {
       ],
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidSigners2),
-      ValidationError,
-      'BaseTransaction: invalid Signers',
-    )
+    assertInvalid(invalidSigners2, 'BaseTransaction: invalid Signers')
   })
 
   it(`Handles invalid Memo`, function () {
@@ -226,11 +197,7 @@ describe('BaseTransaction', function () {
       ],
     } as any
 
-    assert.throws(
-      () => validateBaseTransaction(invalidMemo),
-      ValidationError,
-      'BaseTransaction: invalid Memos',
-    )
+    assertInvalid(invalidMemo, 'BaseTransaction: invalid Memos')
   })
 
   it(`Handles invalid NetworkID`, function () {
@@ -239,11 +206,7 @@ describe('BaseTransaction', function () {
       TransactionType: 'Payment',
       NetworkID: '1024',
     }
-    assert.throws(
-      () => validateBaseTransaction(invalidNetworkID),
-      ValidationError,
-      'Payment: invalid field NetworkID',
-    )
+    assertInvalid(invalidNetworkID, 'Payment: invalid field NetworkID')
   })
 
   it(`Handles invalid Delegate`, function () {
@@ -252,11 +215,7 @@ describe('BaseTransaction', function () {
       TransactionType: 'Payment',
       Delegate: 1234,
     }
-    assert.throws(
-      () => validateBaseTransaction(invalidDelegate),
-      ValidationError,
-      'Payment: invalid field Delegate',
-    )
+    assertInvalid(invalidDelegate, 'Payment: invalid field Delegate')
   })
 
   it(`Handles Account and Delegate being the same error`, function () {
@@ -266,10 +225,141 @@ describe('BaseTransaction', function () {
       TransactionType: 'Payment',
       Delegate: account,
     }
-    assert.throws(
-      () => validateBaseTransaction(invalidDelegate),
-      ValidationError,
+    assertInvalid(
+      invalidDelegate,
       'BaseTransaction: Account and Delegate addresses cannot be the same',
+    )
+  })
+
+  it(`Allows spfSponsorReserve on a rippled-allow-listed transaction type`, function () {
+    const validReserveSponsorship = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rfkE1aSy9G8Upk4JssnwBxhEv5p4mn2KTy',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+    }
+    assertValid(validReserveSponsorship)
+  })
+
+  it(`Rejects spfSponsorReserve on a transaction type not on rippled's allow-list`, function () {
+    const invalidReserveSponsorship = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'OfferCreate',
+      Sponsor: 'rfkE1aSy9G8Upk4JssnwBxhEv5p4mn2KTy',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+    }
+    assertInvalid(
+      invalidReserveSponsorship,
+      'Transaction: OfferCreate cannot use spfSponsorReserve flag',
+    )
+  })
+
+  it(`Rejects spfSponsorReserve combined with Delegate`, function () {
+    const invalidReserveSponsorshipWithDelegate = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Delegate: 'rfkE1aSy9G8Upk4JssnwBxhEv5p4mn2KTy',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+    }
+    assertInvalid(
+      invalidReserveSponsorshipWithDelegate,
+      'Transaction: SponsorFlags.spfSponsorReserve cannot be combined with Delegate',
+    )
+  })
+
+  it(`Allows spfSponsorFee combined with Delegate`, function () {
+    const validFeeSponsorshipWithDelegate = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Delegate: 'rfkE1aSy9G8Upk4JssnwBxhEv5p4mn2KTy',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorFee
+      SponsorFlags: 0x00000001,
+    }
+    assertValid(validFeeSponsorshipWithDelegate)
+  })
+
+  it(`Rejects spfSponsorFee on an inner Batch transaction`, function () {
+    const invalidFeeSponsorshipOnInnerBatchTxn = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorFee
+      SponsorFlags: 0x00000001,
+      // tfInnerBatchTxn
+      Flags: 0x40000000,
+    }
+    assertInvalid(
+      invalidFeeSponsorshipOnInnerBatchTxn,
+      'Transaction: SponsorFlags.spfSponsorFee is not allowed on inner Batch transactions',
+    )
+  })
+
+  it(`Rejects spfSponsorFee on an inner Batch transaction (Flags as object)`, function () {
+    const invalidFeeSponsorshipOnInnerBatchTxn = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorFee
+      SponsorFlags: 0x00000001,
+      Flags: { tfInnerBatchTxn: true },
+    }
+    assertInvalid(
+      invalidFeeSponsorshipOnInnerBatchTxn,
+      'Transaction: SponsorFlags.spfSponsorFee is not allowed on inner Batch transactions',
+    )
+  })
+
+  it(`Allows spfSponsorReserve on an inner Batch transaction`, function () {
+    const validReserveSponsorshipOnInnerBatchTxn = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+      // tfInnerBatchTxn
+      Flags: 0x40000000,
+    }
+    assertValid(validReserveSponsorshipOnInnerBatchTxn)
+  })
+
+  it(`Allows the empty placeholder SponsorSignature on an inner Batch transaction`, function () {
+    const validSponsorSignatureOnInnerBatchTxn = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+      // tfInnerBatchTxn
+      Flags: 0x40000000,
+      SponsorSignature: {
+        SigningPubKey: '',
+      },
+    }
+    assertValid(validSponsorSignatureOnInnerBatchTxn)
+  })
+
+  it(`Rejects a fully-signed SponsorSignature on an inner Batch transaction`, function () {
+    const invalidSponsorSignatureOnInnerBatchTxn = {
+      Account: 'r97KeayHuEsDwyU1yPBVtMLLoQr79QcRFe',
+      TransactionType: 'Payment',
+      Sponsor: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      // spfSponsorReserve
+      SponsorFlags: 0x00000002,
+      // tfInnerBatchTxn
+      Flags: 0x40000000,
+      SponsorSignature: {
+        SigningPubKey: 'hex-string',
+        TxnSignature: 'DEADBEEF',
+      },
+    }
+    assertInvalid(
+      invalidSponsorSignatureOnInnerBatchTxn,
+      'Transaction: invalid SponsorSignature',
     )
   })
 })

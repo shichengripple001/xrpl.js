@@ -64,20 +64,29 @@ From the top-level xrpl.js folder (one level above `packages`), run the followin
 ```bash
 npm install
 # sets up the rippled standalone Docker container - you can skip this step if you already have it set up
-docker run  -p 6006:6006 --rm -it --name rippled_standalone --volume $PWD/.ci-config:/etc/opt/ripple/ --entrypoint bash rippleci/rippled:develop -c 'rippled -a'
+docker run \
+  --detach \
+  --publish 6006:6006 \
+  --volume "$PWD/.ci-config:/etc/xrpld/" \
+  --name xrpld-service \
+  rippleci/xrpld:develop --standalone
 npm run build
 npm run test:integration
 ```
 
 Breaking down the command:
-* `docker run -p 6006:6006` starts a Docker container with an open port for admin WebSocket requests.
- `--rm` tells docker to close the container after processes are done running.
-* `-it` allows you to interact with the container.
-   `--name rippled_standalone` is an instance name for clarity
-* `--volume $PWD/.ci-config:/etc/opt/ripple/` identifies the `rippled.cfg` and `validators.txt` to import. It must be an absolute path, so we use `$PWD` instead of `./`.
-* `rippleci/rippled` is an image that is regularly updated with the latest `rippled` releases
-* `--entrypoint bash rippleci/rippled:develop` manually overrides the entrypoint (for the latest version of rippled on the `develop` branch)
-*  `-c 'rippled -a'` provides the bash command to start `rippled` in standalone mode from the manual entrypoint
+* `--detach` runs the container in the background so the terminal stays free.
+* `--publish 6006:6006` exposes the admin WebSocket port on the host.
+* `--volume "$PWD/.ci-config:/etc/xrpld/"` mounts the host directory containing `xrpld.cfg` and `validators.txt` into the container. The host path may be relative, but the container path must be absolute; `$PWD` is used so the command works regardless of where it's run from.
+* `--name xrpld-service` names the container — this is the label shown by `docker ps` / `docker stats`.
+* `rippleci/xrpld:develop` is the image, regularly rebuilt from the `develop` branch of `rippled`. Omitting the tag resolves to `:latest`.
+* `--standalone` is passed to the image's entrypoint (`xrpld`) to start the node in standalone mode.
+
+Maintainers can run integration and browser tests against a private xrpld image by committing a version to `.github/xrpld-image.env`. Set `XRPLD_PRIVATE_VERSION` to the version without the `private-` prefix (for example, `XRPLD_PRIVATE_VERSION=3.3.0-rc2`); every workflow run triggered afterwards — including pull request runs — pulls `registry.gitlab.com/ripple/xrpledger/xrpld_package_deploy/xrpld-private:private-<version>`. Leave the value empty to use the default public image `rippleci/xrpld:develop`.
+
+Private image access requires the repository variable `GITLAB_REGISTRY_USERNAME` and repository secret `GITLAB_REGISTRY_TOKEN`, configured with a GitLab deploy token that has `read_registry` access. These credentials are not exposed to fork pull requests, so a private version must be tested from a branch in this repository; a fork pull request with a private version set will fail fast rather than silently fall back.
+
+Note to Contributors: When you're done, stop and remove the container with `docker stop xrpld-service && docker rm xrpld-service`.
 
 ### Faucet Tests
 
@@ -106,7 +115,13 @@ This should be run from the `xrpl.js` top level folder (one above the `packages`
 ```bash
 npm run build
 # sets up the rippled standalone Docker container - you can skip this step if you already have it set up
-docker run  -p 6006:6006 --rm -it --name rippled_standalone --volume $PWD/.ci-config:/etc/opt/ripple/ --entrypoint bash rippleci/rippled:develop -c 'rippled -a'
+# (see the Integration Tests section above for a breakdown of this command)
+docker run \
+  --detach \
+  --publish 6006:6006 \
+  --volume "$PWD/.ci-config:/etc/xrpld/" \
+  --name xrpld-service \
+  rippleci/xrpld:develop --standalone
 npm run test:browser
 ```
 
@@ -166,11 +181,10 @@ This updates `docs/` at the top level, where GitHub Pages looks for the docs.
 
 ## Updating `definitions.json`
 
-This should almost always be done using [this script](./packages/ripple-binary-codec/tools/generateDefinitions.js) - if the output needs manual intervention afterwards, consider updating the script instead.
+> **Note:** The previous workflow that generated definitions from rippled source files is deprecated. The generation script is being updated to use the `server_definitions` WebSocket command against a running rippled node instead. Until that work is complete, update definitions.json manually:
 
-1. Clone / pull the latest changes from [rippled](https://github.com/XRPLF/rippled) - Specifically the `develop` branch is usually the right one.
-2. Run `node packages/ripple-binary-codec/tools/generateDefinitions.js path/to/rippled` (assuming you're calling this file from the root directory of xrpl.js).
-3. Verify that the changes make sense by inspection before submitting, as there may be updates required for the tool depending on the latest amendments we're updating to match.
+1. Start a rippled node from the develop branch.
+2. Send the `server_definitions` command via WebSocket and copy the response `result` into `packages/ripple-binary-codec/src/enums/definitions.json`.
 
 ## Adding and removing packages
 
@@ -236,47 +250,48 @@ Note: The same updated config can be used to update xrpl-py's CI as well.
 ## Release
 
 1. Checkout `main` (or your beta branch) and `git pull`.
-1. Create a new branch (`git checkout -b <BRANCH_NAME>`) to capture updates that take place during this process.
-1. Update `HISTORY.md` to reflect release changes.
+2. Create a new branch (`git checkout -b <BRANCH_NAME>`) to capture updates that take place during this process.
+3. Update `HISTORY.md` to reflect release changes.
 
    - [ ] Update the version number and release date, and ensure it lists the changes since the previous release.
 
-1. Run `npm run docgen` if the docs were modified in this release to update them (skip this step for a beta).
-1. Run `npm run build` to triple check the build still works
-1. Run `npx lerna version --no-git-tag-version` - This bumps the package versions.
+5. Run `npm run clean` to delete previously generated artifacts.
+6. Run `npm run build` to triple check the build still works
+7. Run `npx lerna version --no-git-tag-version` - This bumps the package versions.
 
    - For each changed package, pick what the new version should be. Lerna will bump the versions, commit version bumps to `main`, and create a new git tag for each published package.
    - If you do NOT want to update the package number, choose "Custom Version" and set the version to be the same as the existing version. Lerna will not publish any changes in this case.
    - If publishing a beta, make sure that the versions are all of the form `a.b.c-beta.d`, where `a`, `b`, and `c` are identical to the last normal release except for one, which has been incremented by 1.
 
-1. Run `npm i` to update the package-lock with the updated versions.
-1. Create a new PR from this branch into `main` and merge it (you can directly merge into the beta branch for a beta).
-1. Checkout `main` and `git pull` (you can skip this step for a beta since you already have the latest version of the beta branch).
-1. Actually publish the packages with one of the following:
+8. Run `npm i` to update the package-lock with the updated versions.
+9. Create a new PR from this branch into `main` and merge it (you can directly merge into the beta branch for a beta).
+10. Checkout `main` and `git pull` (you can skip this step for a beta since you already have the latest version of the beta branch).
+11. Actually publish the packages with one of the following:
 
-   - Stable release: Run `npx lerna publish from-package --yes`
-   - Beta release: Run `npx lerna publish from-package --dist-tag beta --yes`
-     Notice this allows developers to install the package with `npm add xrpl@beta`
+    - Stable release: Run `npx lerna publish from-package --yes`
+    - Beta release: Run `npx lerna publish from-package --dist-tag beta --yes`
+      Notice this allows developers to install the package with `npm add xrpl@beta`
 
-1. If requested, enter your [npmjs.com](https://npmjs.com) OTP (one-time password) to complete publication.
+12. If requested, enter your [npmjs.com](https://npmjs.com) OTP (one-time password) to complete publication.
 
-   NOW YOU HAVE PUBLISHED! But you're not done; we have to notify people!
+    NOW YOU HAVE PUBLISHED! But you're not done; we have to notify people!
 
-1. Run `git tag <tagname> -m <tagname>`, where `<tagname>` is the new package and version (e.g. `xrpl@2.1.1`), for each version released.
-1. Run `git push --follow-tags`, to push the tags to Github.
-1. On GitHub, click the "Releases" link on the right-hand side of the page.
+13. Run `git tag <tagname> -m <tagname>`, where `<tagname>` is the new package and version (e.g. `xrpl@2.1.1`), for each version released.
+14. Run `git push --follow-tags`, to push the tags to Github.
 
-1. Repeat for each release:
+15. On GitHub, click the "Releases" link on the right-hand side of the page.
 
-   1. Click "Draft a new release"
-   1. Click "Choose a tag", and choose a tag that you just created.
-   1. Edit the name of the release to match the tag (IE \<package\>@\<version\>) and edit the description as you see fit.
+16. Repeat for each release:
 
-1. Send an email to [xrpl-announce](https://groups.google.com/g/xrpl-announce).
-1. Lastly, send a similar message to the XRPL Discord in the [`javascript` channel](https://discord.com/channels/886050993802985492/886053111179915295). The message should include:
-   1. The version changes for xrpl libraries
-   1. A link to the more detailed changes
-   1. Highlights of important changes
+    1. Click "Draft a new release"
+    2. Click "Choose a tag", and choose a tag that you just created.
+    3. Edit the name of the release to match the tag (IE \<package\>@\<version\>) and edit the description as you see fit.
+
+17. Send an email to [xrpl-announce](https://groups.google.com/g/xrpl-announce).
+18. Lastly, send a similar message to the XRPL Discord in the [`javascript` channel](https://discord.com/channels/886050993802985492/886053111179915295). The message should include:
+    1. The version changes for xrpl libraries
+    2. A link to the more detailed changes
+    3. Highlights of important changes
 
 
 ## Mailing Lists

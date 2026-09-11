@@ -8,12 +8,14 @@ import {
   GlobalFlagsInterface,
   validateBaseTransaction,
   isAccount,
+  isDomainID,
   validateRequiredField,
   validateOptionalField,
   isNumber,
   Account,
   validateCredentialsList,
   MAX_AUTHORIZED_CREDENTIALS,
+  isArray,
 } from './common'
 import type { TransactionMetadataBase } from './metadata'
 
@@ -41,6 +43,11 @@ export enum PaymentFlags {
    * details.
    */
   tfLimitQuality = 0x00040000,
+  /**
+   * Indicates that the payment is creating a new account and the account's
+   * reserve is being sponsored. Used in conjunction with XLS-68 sponsorship.
+   */
+  tfSponsorCreatedAccount = 0x00080000,
 }
 
 /**
@@ -103,6 +110,11 @@ export interface PaymentFlagsInterface extends GlobalFlagsInterface {
    * details.
    */
   tfLimitQuality?: boolean
+  /**
+   * Indicates that the payment is creating a new account and the account's
+   * reserve is being sponsored. Used in conjunction with XLS-68 sponsorship.
+   */
+  tfSponsorCreatedAccount?: boolean
 }
 
 /**
@@ -119,6 +131,9 @@ export interface Payment extends BaseTransaction {
    * to this amount instead.
    */
   Amount: Amount | MPTAmount
+
+  DeliverMax?: Amount | MPTAmount
+
   /** The unique address of the account receiving the payment. */
   Destination: Account
   /**
@@ -156,6 +171,18 @@ export interface Payment extends BaseTransaction {
    * The credentials included must not be expired.
    */
   CredentialIDs?: string[]
+  /**
+   * The domain the sender intends to use. Both the sender and destination must
+   * be part of this domain. The DomainID can be included if the sender intends
+   * it to be a cross-currency payment (i.e. if the payment is going to interact
+   * with the DEX). The domain will only play it's role if there is a path that
+   * crossing an orderbook.
+   *
+   * Note: it's still possible that DomainID is included but the payment does
+   * not interact with DEX, it simply means that the DomainID will be ignored
+   * during payment paths.
+   */
+  DomainID?: string
   Flags?: number | PaymentFlagsInterface
 }
 
@@ -195,11 +222,12 @@ export function validatePayment(tx: Record<string, unknown>): void {
     throw new ValidationError('PaymentTransaction: InvoiceID must be a string')
   }
 
-  if (
-    tx.Paths !== undefined &&
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Only used by JS
-    !isPaths(tx.Paths as Array<Array<Record<string, unknown>>>)
-  ) {
+  validateOptionalField(tx, 'DomainID', isDomainID, {
+    txType: 'PaymentTransaction',
+    paramName: 'DomainID',
+  })
+
+  if (tx.Paths !== undefined && !isPaths(tx.Paths)) {
     throw new ValidationError('PaymentTransaction: invalid Paths')
   }
 
@@ -208,6 +236,59 @@ export function validatePayment(tx: Record<string, unknown>): void {
   }
 
   checkPartialPayment(tx)
+  checkSponsorCreatedAccount(tx)
+}
+
+/**
+ * tfSponsorCreatedAccount marks a Payment that funds a new account whose reserve is
+ * sponsored. rippled rejects it combined with tfNoRippleDirect/tfPartialPayment/
+ * tfLimitQuality, with SendMax or Paths, or with a non-XRP Amount.
+ *
+ * @param tx - A Payment Transaction.
+ * @throws When tfSponsorCreatedAccount is combined with an incompatible field or flag.
+ */
+function checkSponsorCreatedAccount(tx: Record<string, unknown>): void {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Only used by JS
+  const flags = (tx.Flags ?? 0) as number | PaymentFlagsInterface
+  const isTfSponsorCreatedAccount =
+    typeof flags === 'number'
+      ? isFlagEnabled(flags, PaymentFlags.tfSponsorCreatedAccount)
+      : (flags.tfSponsorCreatedAccount ?? false)
+
+  if (!isTfSponsorCreatedAccount) {
+    return
+  }
+
+  const isTfNoRippleDirect =
+    typeof flags === 'number'
+      ? isFlagEnabled(flags, PaymentFlags.tfNoRippleDirect)
+      : (flags.tfNoRippleDirect ?? false)
+  const isTfPartialPayment =
+    typeof flags === 'number'
+      ? isFlagEnabled(flags, PaymentFlags.tfPartialPayment)
+      : (flags.tfPartialPayment ?? false)
+  const isTfLimitQuality =
+    typeof flags === 'number'
+      ? isFlagEnabled(flags, PaymentFlags.tfLimitQuality)
+      : (flags.tfLimitQuality ?? false)
+
+  if (isTfNoRippleDirect || isTfPartialPayment || isTfLimitQuality) {
+    throw new ValidationError(
+      'PaymentTransaction: tfSponsorCreatedAccount cannot be combined with tfNoRippleDirect, tfPartialPayment, or tfLimitQuality',
+    )
+  }
+
+  if (tx.SendMax !== undefined || tx.Paths !== undefined) {
+    throw new ValidationError(
+      'PaymentTransaction: tfSponsorCreatedAccount cannot be combined with SendMax or Paths',
+    )
+  }
+
+  if (typeof tx.Amount !== 'string') {
+    throw new ValidationError(
+      'PaymentTransaction: tfSponsorCreatedAccount requires a native XRP Amount',
+    )
+  }
 }
 
 function checkPartialPayment(tx: Record<string, unknown>): void {
@@ -223,7 +304,7 @@ function checkPartialPayment(tx: Record<string, unknown>): void {
     const isTfPartialPayment =
       typeof flags === 'number'
         ? isFlagEnabled(flags, PaymentFlags.tfPartialPayment)
-        : flags.tfPartialPayment ?? false
+        : (flags.tfPartialPayment ?? false)
 
     if (!isTfPartialPayment) {
       throw new ValidationError(
@@ -276,12 +357,12 @@ function isPath(path: unknown): path is Path {
 }
 
 function isPaths(paths: unknown): paths is Path[] {
-  if (!Array.isArray(paths) || paths.length === 0) {
+  if (!isArray(paths) || paths.length === 0) {
     return false
   }
 
   for (const path of paths) {
-    if (!Array.isArray(path) || path.length === 0) {
+    if (!isArray(path) || path.length === 0) {
       return false
     }
 

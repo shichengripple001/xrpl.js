@@ -1,5 +1,6 @@
 /* eslint-disable no-inline-comments -- Necessary for important note */
 /* eslint-disable max-lines -- There is a lot to export */
+/* eslint-disable prettier/prettier -- Required here to keep formatting in line */
 import type { APIVersion, DEFAULT_API_VERSION } from '../common'
 
 import {
@@ -41,6 +42,10 @@ import {
   AccountOffersRequest,
   AccountOffersResponse,
 } from './accountOffers'
+import {
+  AccountSponsoringRequest,
+  AccountSponsoringResponse,
+} from './accountSponsoring'
 import {
   AccountTxRequest,
   AccountTxResponse,
@@ -107,7 +112,14 @@ import {
   LedgerDataRequest,
   LedgerDataResponse,
 } from './ledgerData'
-import { LedgerEntryRequest, LedgerEntryResponse } from './ledgerEntry'
+import {
+  LedgerEntryBinaryRequest,
+  LedgerEntryJsonRequest,
+  LedgerEntryRequest,
+  LedgerEntryBinaryResponse,
+  LedgerEntryJsonResponse,
+  LedgerEntryResponse,
+} from './ledgerEntry'
 import { ManifestRequest, ManifestResponse } from './manifest'
 import { NFTBuyOffersRequest, NFTBuyOffersResponse } from './nftBuyOffers'
 import {
@@ -189,6 +201,7 @@ import {
   UnsubscribeRequest,
   UnsubscribeResponse,
 } from './unsubscribe'
+import { VaultInfoRequest, VaultInfoResponse } from './vaultInfo'
 /**
  * @category Requests
  */
@@ -201,6 +214,7 @@ type Request =
   | AccountNFTsRequest
   | AccountObjectsRequest
   | AccountOffersRequest
+  | AccountSponsoringRequest
   | AccountTxRequest
   | GatewayBalancesRequest
   | NoRippleCheckRequest
@@ -247,6 +261,8 @@ type Request =
   | AMMInfoRequest
   // Price Oracle methods
   | GetAggregatePriceRequest
+  // Vault methods
+  | VaultInfoRequest
 
 /**
  * @category Responses
@@ -260,6 +276,7 @@ type Response<Version extends APIVersion = typeof DEFAULT_API_VERSION> =
   | AccountNFTsResponse
   | AccountObjectsResponse
   | AccountOffersResponse
+  | AccountSponsoringResponse
   | AccountTxVersionResponseMap<Version>
   | GatewayBalancesResponse
   | NoRippleCheckResponse
@@ -306,6 +323,8 @@ type Response<Version extends APIVersion = typeof DEFAULT_API_VERSION> =
   | AMMInfoResponse
   // Price Oracle methods
   | GetAggregatePriceResponse
+  // Vault methods
+  | VaultInfoResponse
 
 export type RequestResponseMap<
   T,
@@ -324,6 +343,8 @@ export type RequestResponseMap<
   ? AccountObjectsResponse
   : T extends AccountOffersRequest
   ? AccountOffersResponse
+  : T extends AccountSponsoringRequest
+  ? AccountSponsoringResponse
   : T extends AccountTxRequest
   ? AccountTxVersionResponseMap<Version>
   : T extends AMMInfoRequest
@@ -406,8 +427,12 @@ export type RequestResponseMap<
   ? LedgerCurrentResponse
   : T extends LedgerDataRequest
   ? LedgerDataResponse
+  : T extends LedgerEntryBinaryRequest
+  ? LedgerEntryBinaryResponse
+  : T extends LedgerEntryJsonRequest
+  ? LedgerEntryJsonResponse
   : T extends LedgerEntryRequest
-  ? LedgerEntryResponse
+  ? LedgerEntryJsonResponse
   : T extends SimulateBinaryRequest
   ? SimulateBinaryResponse
   : T extends SimulateJsonRequest
@@ -464,6 +489,8 @@ export type RequestResponseMap<
   ? NFTsByIssuerResponse
   : T extends NFTHistoryRequest
   ? NFTHistoryResponse
+  : T extends VaultInfoRequest
+  ? VaultInfoResponse
   : Response<Version>
 
 export type MarkerRequest = Request & {
@@ -530,6 +557,8 @@ export {
   AccountOffer,
   AccountOffersRequest,
   AccountOffersResponse,
+  AccountSponsoringRequest,
+  AccountSponsoringResponse,
   AccountTxRequest,
   AccountTxResponse,
   AccountTxV1Response,
@@ -557,7 +586,11 @@ export {
   LedgerDataBinaryLedgerEntry,
   LedgerDataResponse,
   LedgerDataLedgerState,
+  LedgerEntryBinaryRequest,
+  LedgerEntryJsonRequest,
   LedgerEntryRequest,
+  LedgerEntryBinaryResponse,
+  LedgerEntryJsonResponse,
   LedgerEntryResponse,
   // transaction methods with types
   SimulateRequest,
@@ -649,4 +682,7 @@ export {
   // AMM methods
   AMMInfoRequest,
   AMMInfoResponse,
+  // Vault methods
+  VaultInfoRequest,
+  VaultInfoResponse,
 }
